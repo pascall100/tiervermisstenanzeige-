@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tier PDF Generator</title>
+    <link rel="stylesheet" href="style.css">
+   
+</head>
+<body>
+    <div class="container">
+        <h3>VERMISSTEN - ANZEIGE - HILFE </h3>
+        <form id="animalForm">
+            <label>
+                <input type="radio" name="animalType" value="cat" checked> Katze vermisst
+            </label>
+            <label>
+                <input type="radio" name="animalType" value="dog"> Hund vermisst
+            </label>
+            <label>
+                <input type="radio" name="animalType" value="bird"> Vogel entflogen
+            </label>
+            <br><br>
+
+            <label for="animalBreed">Art  des Tieres:</label>
+            <input type="text" id="animalBreed" name="animalBreed" required><br><br>
+
+            <label for="animalColor">Farbe des Tieres:</label>
+            <input type="text" id="animalColor" name="animalColor" required><br><br>
+
+            <label for="animalSize">Größe des Tieres:</label>
+            <input type="text" id="animalSize" name="animalSize" required><br><br>
+
+            <label for="animalFeatures">Zuletzt gesehen - Datum -  Merkmale  </label>
+            <textarea id="animalFeatures" name="animalFeatures" rows="4" required></textarea><br><br>
+
+            <label for="animalImage">Bild des Tieres hochladen:</label>
+            <input type="file" id="animalImage" accept="image/*"><br><br>
+
+            <label for="contactInfo">Kontakt (Telefon oder E-Mail):</label>
+            <input type="text" id="contactInfo" name="contactInfo" required><br><br>
+
+            <div class="button-group">
+                <button type="button" onclick="generatePDF()">PDF herunterladen</button>
+                <button type="button" onclick="resetForm()">Alle Eingaben löschen</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+
+            const animalType = document.querySelector('input[name="animalType"]:checked').value;
+            const animalBreed = document.getElementById("animalBreed").value;
+            const animalColor = document.getElementById("animalColor").value;
+            const animalSize = document.getElementById("animalSize").value;
+            const animalFeatures = document.getElementById("animalFeatures").value;
+            const contactInfo = document.getElementById("contactInfo").value.toUpperCase();
+            const animalImage = document.getElementById("animalImage").files[0];
+
+            if (!animalBreed || !animalColor || !animalSize || !animalFeatures || !contactInfo) {
+                alert("Bitte füllen Sie alle erforderlichen Felder aus.");
+                return;
+            }
+
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Formatierte Kopfzeile
+            doc.setFontSize(28); // Größere Schriftgröße für die Überschrift
+            doc.setTextColor(600, 0, 0); // Kräftiges Rot
+            let headerText = "";
+            if (animalType === 'cat') {
+                headerText = " HILFE - Katze vermisst!";
+            } else if (animalType === 'dog') {
+                headerText = " HILFE - Hund vermisst!";
+            } else if (animalType === 'bird') {
+                headerText = " HILFE - Vogel entflogen!";
+            }
+            doc.text(headerText, 105, 30, null, null, 'center');
+
+            // Fette rote Linie
+            doc.setLineWidth(6.5);
+            doc.setDrawColor(255, 0, 0);
+            doc.line(10, 35, 200, 35);
+
+            // Formatierter Text
+            doc.setFontSize(16); // Größere Schriftgröße für den restlichen Text
+            doc.setTextColor(50, 50, 50); // Dunkleres Grau für besseren Kontrast
+            doc.text(`Art des Tieres: ${animalBreed}`, 10, 50);
+            doc.text(`Farbe des Tieres: ${animalColor}`, 10, 60);
+            doc.text(`Größe des Tieres: ${animalSize}`, 10, 70);
+            doc.setFontSize(14); // Kleinere Schriftgröße für Merkmale
+            doc.text("Besondere Merkmale:", 10, 80);
+            doc.setFontSize(14);
+            doc.text(animalFeatures, 10, 90);
+
+            if (animalImage) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const imgData = event.target.result;
+
+                    // Dynamische Bildgrößenanpassung
+                    const imgWidth = 180;
+                    const imgHeight = 180;
+
+                    const img = new Image();
+                    img.src = imgData;
+                    img.onload = function() {
+                        const aspectRatio = img.width / img.height;
+                        let displayWidth = imgWidth;
+                        let displayHeight = imgHeight;
+
+                        if (aspectRatio > 1) {
+                            displayHeight = imgWidth / aspectRatio;
+                        } else {
+                            displayWidth = imgHeight * aspectRatio;
+                        }
+
+                        const imgX = (210 - displayWidth) / 2;
+                        const imgY = 110;
+
+                        doc.addImage(imgData, 'JPEG', imgX, imgY, displayWidth, displayHeight);
+
+                        // Kontaktinformationen unter dem Bild
+                        doc.setFontSize(30);
+                        doc.setTextColor(0, 0, 0); // Schwarzer Text für Kontaktinformationen
+                        doc.text(contactInfo, 105, imgY + displayHeight + 20, null, null, 'center');
+
+                        // Fußzeile
+                        doc.setFontSize(12);
+                        doc.setTextColor(150);
+                        doc.text("Seite 1 von 1", 105, 290, null, null, 'center');
+
+                        doc.save(`${animalType}_vermisst.pdf`);
+                    };
+                };
+                reader.readAsDataURL(animalImage);
+            } else {
+                // Wenn kein Bild hochgeladen wurde, einfach das PDF mit Text generieren
+                doc.setFontSize(18);
+                doc.setTextColor(0, 0, 0); // Schwarzer Text für Kontaktinformationen
+                doc.text(contactInfo, 105, 110, null, null, 'center');
+
+                // Fußzeile
+                doc.setFontSize(12);
+                doc.setTextColor(150);
+                doc.text("Seite 1 von 1", 105, 290, null, null, 'center');
+
+                doc.save(`${animalType}_vermisst.pdf`);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById("animalForm").reset();
+        }
+    </script>
+</body>
+</html>
